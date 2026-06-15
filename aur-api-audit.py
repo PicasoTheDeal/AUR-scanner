@@ -15,6 +15,7 @@ UNDERLINE = "\033[4m"
 NC = "\033[0m"
 
 ARCH_OFFICIAL_URL = "https://md.archlinux.org/s/SxbqukK6IA/download"
+GITHUB_COMMUNITY_URL = "https://raw.githubusercontent.com/lenucksi/aur-malware-check/master/package_list.txt"
 
 MALICIOUS_SIGNATURES = {
     "lockfile-js": "Known malicious Node downstream payload implant",
@@ -36,8 +37,8 @@ def enforce_root():
 
 def print_banner():
     print(f"{CYAN}{BOLD}===================================================================={NC}")
-    print(f"{CYAN}{BOLD}        AUR FORENSIC AUDITOR: ARCH INCIDENT DATA INTELLIGENCE       {NC}")
-    print(f"{CYAN}        Parsing Official Security Advisory Tracking Feeds           {NC}")
+    print(f"{CYAN}{BOLD}        AUR FORENSIC AUDITOR: MULTI-FEED INTELLIGENCE MUX            {NC}")
+    print(f"{CYAN}        Parsing Official & Community Open-Source Repositories        {NC}")
     print(f"{CYAN}{BOLD}===================================================================={NC}\n")
 
 def fetch_aggregated_intel():
@@ -60,11 +61,27 @@ def fetch_aggregated_intel():
     except Exception as e:
         print(f"    [FAIL] Official feed unreachable: {e}")
 
+    print(f"{BOLD}[*] Attempting Fetch: GitHub Community Consolidated Core Feed...{NC}")
+    req_community = urllib.request.Request(
+        GITHUB_COMMUNITY_URL, 
+        headers={'User-Agent': 'Mozilla/5.0 (X11; Arch Linux; Linux x86_64)'}
+    )
+    try:
+        with urllib.request.urlopen(req_community, timeout=10) as response:
+            raw_content = response.read().decode('utf-8')
+        for line in raw_content.splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                compromised_packages.add(line.lower())
+        print(f"    [SUCCESS] Merged community definitions from lenucksi tracking repo.")
+    except Exception as e:
+        print(f"    [FAIL] Community GitHub feed unreachable (Check repo state): {e}")
+
     if not compromised_packages:
-        print(f"    [ALERT] Active telemetry collection yielded zero results. Deploying fallback validation array.")
+        print(f"    [ALERT] Active multi-feed collection yielded zero results. Deploying fallback validation array.")
         return {"python-plexapi-kanon", "test-malicious-nuke", "test-malicious-reset"}
         
-    print(f"    [TOTAL TARGETS] Monitoring {len(compromised_packages)} blacklisted AUR identities.")
+    print(f"    [TOTAL TARGETS] Monitoring {len(compromised_packages)} blacklisted AUR identities across all clusters.")
     return compromised_packages
 
 def parse_local_aur_registry():
