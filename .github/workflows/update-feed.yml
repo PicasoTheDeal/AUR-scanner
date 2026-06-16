@@ -50,5 +50,5 @@ jobs:
           git add packages.txt
           if ! git diff --cached --quiet; then
             git commit -m "Automated synchronization of threat feed baseline"
-            git push origin main
+            git push origin HEAD:main
           fi
