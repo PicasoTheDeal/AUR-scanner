@@ -59,7 +59,7 @@ It opens cached `PKGBUILD` and `.install` files, passing their contents through 
 Clone the repository directly into your local environment:
 
 ```bash
-git clone [https://github.com/PicasoTheDeal/AUR-threat-mitigator](https://github.com/PicasoTheDeal/AUR-threat-mitigator)
+git clone https://github.com/PicasoTheDeal/AUR-threat-mitigator
 cd AUR-threat-mitigator
 ```
 
@@ -70,7 +70,7 @@ Execute the auditor directly from your terminal.
 [!CAUTION] **Root Privileges Required:** This tool must be executed with `sudo`. The forensic engine requires root access to read protected ALPM metadata directories (`/var/lib/pacman/local/`) and parse restricted system structures without hitting OS permission blocks. Execution will halt immediately if run as an unprivileged user.
 
 ```bash
-sudo python3 auditor.py
+sudo python3 aur-api-audit.py
 ```
 
 Understanding Diagnostic Verdicts
