@@ -21,7 +21,7 @@ A lightweight offline static analysis utility to scan local ALPM metadata and AU
 - Hex-encoded string layout obfuscation (`\xHEX`)
 - Unauthorized build-time package executions (`npm install`)
 
-## ⚠️ Disclaimer & Limitations
+## Disclaimer & Limitations
 
 `aur-scanner` is a static signature and heuristic auditing tool, **not** a kernel-level EDR or full antivirus solution. 
 
