@@ -56,5 +56,10 @@ A lightweight offline static analysis utility to scan local ALPM metadata and AU
    [+] Found nothing (Green, Exit Code 0): No signatures matched. Environment matches current baseline configuration thresholds.
 
    [!] [Path]: Trigger [Pattern] (Red, Exit Code 1): Code-level anomaly detected.
+
+## Credits and Acknowledgments
+
+ - Gemini (Google AI)
+ - Members of the EndeavourOS, CachyOS, and Arch Linux communities for technical feedback
    
    **Note**: If a heuristic trigger is verified inside an installed package metadata or local cache, assume the host environment is compromised. Standard pacman -R removals may be insufficient if out-of-band execution occurred during the build/install phase. Immediate forensic triage or system re-installation is recommended.
