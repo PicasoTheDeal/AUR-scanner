@@ -23,23 +23,25 @@ jobs:
 
       - name: Validate or Initialize Local Manifest
         run: |
-          python3 -c '
-          import re, sys
+          cat << 'EOF' > validate.py
+          import re
+          import sys
           from pathlib import Path
+
           p = Path("packages.txt")
           if not p.exists():
-              print("[*] packages.txt not found. Creating a blank tracking file to prevent pipeline failure.")
-              p.write_text("# Local Threat Signature Baseline\n# Add one low-case package name per line\n")
+              p.write_text("# Local Threat Signature Baseline\n")
               sys.exit(0)
-          
+
           lines = p.read_text().splitlines()
           for l in lines:
               l = l.strip()
-              if not l or l.startswith("#"): continue
+              if not l or l.startswith("#"): 
+                  continue
               if not re.match(r"^[a-z0-9\-_\+\.]+$", l):
-                  print(f"[ERROR] Invalid alphanumeric package signature format: {l}")
                   sys.exit(1)
-          '
+          EOF
+          python3 validate.py
 
       - name: Check for Changes and Commit
         run: |
