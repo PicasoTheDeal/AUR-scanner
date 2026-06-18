@@ -11,19 +11,45 @@ NC = "\033[0m"
 
 MANIFEST_FILE = "packages.txt"
 
-MALICIOUS_SIGNATURES = {
+MALICIOUS_SIGNATURES = [
+    "base64\\s+-(d|-decode)",
+    "openssl\\s+enc\\s+-base64",
+    "\\\\[xX][0-9a-fA-F]{2}",
+    "\\\\[0-7]{3}",
+    "c['\"\\\\\\\\']*u['\"\\\\\\\\']*r['\"\\\\\\\\']*l",
+    "w['\"\\\\\\\\']*g['\"\\\\\\\\']*e['\"\\\\\\\\']*t",
+    "n['\"\\\\\\\\']*p['\"\\\\\\\\']*m(?:\\\\\\\\?\\s)+(install|i)",
+    "y['\"\\\\\\\\']*a['\"\\\\\\\\']*r['\"\\\\\\\\']*n(?:\\\\\\\\?\\s)+install",
+    "p['\"\\\\\\\\']*n['\"\\\\\\\\']*p['\"\\\\\\\\']*m(?:\\\\\\\\?\\s)+install",
     "lockfile-js",
     "atomic-lockfile",
-    r"npm\s+(install|i)\s+",
-    r"(curl|wget).*\|\s*(bash|sh|node|python)",
-    r"base64\s+-d\s*\|\s*(bash|sh|python)",
-    r"echo.*\|\s*base64\s+-d",
-    r"openssl\s+enc\s+-base64",
-    r"(socat|nc|netcat)\s+",
-    r"exec\s+\d+<>/dev/(tcp|udp)",
-    r"eval\s*\(\s*(curl|wget)",
-    r"\\x[0-9a-fA-F]{2}"
-}
+    "(socat|nc|netcat)\\s+",
+    "exec\\s+\\d+<>/dev/(tcp|udp)",
+    "eval\\s*\\(",
+    "(md5|sha256)sums\\s*=\\s*\\([^\\)]*['\"]SKIP['\"]",
+    "source\\s*=\\s*\\([^\\)]*git\\+sys:",
+    "chmod\\s+(\\+s|4[0-7]{3})",
+    "chown\\s+root",
+    "NOPASSWD\\s*:\\s*ALL",
+    "pkexec\\s+",
+    "LD_PRELOAD=",
+    "systemctl\\s+(enable|stop)",
+    "crontab\\s+",
+    "/etc/(sudoers|passwd|rc\\.local|systemd|cron)",
+    "\\.config/autostart",
+    "\\.(bashrc|zshrc|profile|bash_profile)",
+    "setenforce\\s+0",
+    "rm\\s+-rf\\s+/var/log",
+    "unset\\s+HISTFILE",
+    "HISTSIZE=0",
+    "history\\s+-c",
+    "\\.(aws/credentials|kube/config|docker/config\\.json|ssh/id_)",
+    "discord(app)?\\.com/api/webhooks",
+    "api\\.telegram\\.org/bot",
+    "pastebin\\.com/raw",
+    "curl\\s+.*-F\\s+['\"]file=@"
+]
+
 def load_local_manifest():
     manifest_path = Path(MANIFEST_FILE)
     compromised_packages = set()
@@ -55,9 +81,9 @@ def analyze_file_content(file_path):
     findings = []
     try:
         content = file_path.read_text(errors="ignore")
-        for signature, description in MALICIOUS_SIGNATURES.items():
+        for signature in MALICIOUS_SIGNATURES:
             if re.search(signature, content, re.IGNORECASE):
-                findings.append((signature, description))
+                findings.append(signature)
     except Exception:
         pass
     return findings
@@ -75,8 +101,8 @@ def deep_scan_all_caches(user_home):
             continue
         for pkgbuild_file in base.glob("**/PKGBUILD"):
             structural_anomalies = analyze_file_content(pkgbuild_file)
-            for sig, desc in structural_anomalies:
-                findings_list.append(f"{pkgbuild_file}: Trigger '{sig}' ({desc})")
+            for sig in structural_anomalies:
+                findings_list.append(f"{pkgbuild_file}: Trigger '{sig}'")
     return findings_list
 
 def audit_target_locations(package, version, user_home):
@@ -87,8 +113,8 @@ def audit_target_locations(package, version, user_home):
             target_file = alpm_meta_base / critical_file
             if target_file.exists():
                 structural_anomalies = analyze_file_content(target_file)
-                for sig, desc in structural_anomalies:
-                    findings_list.append(f"{target_file}: Trigger '{sig}' ({desc})")
+                for sig in structural_anomalies:
+                    findings_list.append(f"{target_file}: Trigger '{sig}'")
 
     cache_clusters = [
         user_home / f".cache/yay/{package}",
@@ -101,8 +127,8 @@ def audit_target_locations(package, version, user_home):
             pkgbuild_file = cache_directory / "PKGBUILD"
             if pkgbuild_file.exists():
                 structural_anomalies = analyze_file_content(pkgbuild_file)
-                for sig, desc in structural_anomalies:
-                    findings_list.append(f"{pkgbuild_file}: Trigger '{sig}' ({desc})")
+                for sig in structural_anomalies:
+                    findings_list.append(f"{pkgbuild_file}: Trigger '{sig}'")
     return findings_list
 
 def main():
