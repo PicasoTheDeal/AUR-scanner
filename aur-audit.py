@@ -11,19 +11,45 @@ NC = "\033[0m"
 
 MANIFEST_FILE = "packages.txt"
 
-MALICIOUS_SIGNATURES = {
-    "lockfile-js",
-    "atomic-lockfile",
-    r"npm\s+(install|i)\s+",
-    r"(curl|wget).*\|\s*(bash|sh|node|python)",
-    r"base64\s+-d\s*\|\s*(bash|sh|python)",
-    r"echo.*\|\s*base64\s+-d",
-    r"openssl\s+enc\s+-base64",
-    r"(socat|nc|netcat)\s+",
-    r"exec\s+\d+<>/dev/(tcp|udp)",
-    r"eval\s*\(\s*(curl|wget)",
-    r"\\x[0-9a-fA-F]{2}"
-}
+MALICIOUS_SIGNATURES = [
+    ("base64\\s+-(d|-decode)", "Base64 Decoding: hidden payloads in memory"),
+    ("openssl\\s+enc\\s+-base64", "Alternative Base64 Decoding: Using OpenSSL to decode hidden data"),
+    ("\\\\[xX][0-9a-fA-F]{2}", "Hex Escaping: Hiding malicious strings past basic keyword filters"),
+    ("\\\\[0-7]{3}", "Octal Escaping: Masking text to trick signature scanners"),
+    ("c['\"\\\\\\\\']*u['\"\\\\\\\\']*r['\"\\\\\\\\']*l", "Obfuscated curl: Hiding data-transfer commands to bypass filters"),
+    ("w['\"\\\\\\\\']*g['\"\\\\\\\\']*e['\"\\\\\\\\']*t", "Obfuscated wget: Hiding external file download commands"),
+    ("n['\"\\\\\\\\']*p['\"\\\\\\\\']*m(?:\\\\\\\\?\\s)+(install|i)", "Obfuscated npm install: Hiding Node package installations"),
+    ("y['\"\\\\\\\\']*a['\"\\\\\\\\']*r['\"\\\\\\\\']*n(?:\\\\\\\\?\\s)+install", "Obfuscated yarn install: Hiding Yarn package manager installations"),
+    ("p['\"\\\\\\\\']*n['\"\\\\\\\\']*p['\"\\\\\\\\']*m(?:\\\\\\\\?\\s)+install", "Obfuscated pnpm install: Hiding pnpm package manager installations"),
+    ("lockfile-js", "Lockfile Dependency Check: Checking for JS lockfiles, often for supply-chain poisoning"),
+    ("atomic-lockfile", "Atomic Lockfile Check: Associated with automated supply-chain manipulation"),
+    ("(socat|nc|netcat)\\s+", "Netcat/Socat Usage: Spawning unencrypted reverse shells"),
+    ("exec\\s+\\d+<>/dev/(tcp|udp)", "Bash Native Reverse Shell: Backdoor routing natively through Bash networking"),
+    ("eval\\s*\\(", "Dynamic Code Execution: Running downloaded/decoded text as live code"),
+    ("(md5|sha256)sums\\s*=\\s*\\([^\\)]*['\"]SKIP['\"]", "Checksum Bypassing: Skipping file integrity verification in build scripts"),
+    ("source\\s*=\\s*\\([^\\)]*git\\+sys:", "Sketchy Build Sources: Unusual custom protocols indicating hijacked downloads"),
+    ("chmod\\s+(\\+s|4[0-7]{3})", "SUID Backdoor Creation: Setting files to execute with root privileges"),
+    ("chown\\s+root", "Root Ownership Assignment: Transferring file ownership to root for backdoors"),
+    ("NOPASSWD\\s*:\\s*ALL", "Sudoers Exploitation: Allowing a user to run root commands without a password"),
+    ("pkexec\\s+", "Polkit Execution: Potential local privilege escalation via PolicyKit"),
+    ("LD_PRELOAD=", "Environment Hijacking: Pre-loading custom libraries to hook/hijack system functions"),
+    ("systemctl\\s+(enable|stop)", "Service Tampering: Auto-starting backdoors or stopping security services"),
+    ("crontab\\s+", "Scheduled Task Persistence: Tampering with cron jobs to repeatedly execute malware"),
+    ("/etc/(sudoers|passwd|rc\\.local|systemd|cron)", "Core System File Tampering: Modifying critical authentication/startup files"),
+    ("\\.config/autostart", "Desktop Auto-Start: Dropping malware to launch on graphical desktop login"),
+    ("\\.(bashrc|zshrc|profile|bash_profile)", "Shell Profile Poisoning: Injecting malicious commands into user terminal startup"),
+    ("setenforce\\s+0", "Disabling SELinux: Turning off mandatory access controls"),
+    ("rm\\s+-rf\\s+/var/log", "Log Nuking: Aggressively deleting system logs to destroy evidence"),
+    ("unset\\s+HISTFILE", "Killing History Logging: Telling the shell to stop saving command history"),
+    ("HISTSIZE=0", "Disabling History: Setting terminal history size to zero"),
+    ("history\\s+-c", "Clearing Evidence: Wiping current shell history buffer"),
+    ("\\.(aws/credentials|kube/config|docker/config\\.json|ssh/id_)", "Secret Hunting: Targeting cloud, container, or SSH credentials"),
+    ("discord(app)?\\.com/api/webhooks", "Discord Data Exfiltration: Using webhooks to dump stolen data"),
+    ("api\\.telegram\\.org/bot", "Telegram Data Exfiltration: Using Telegram bots for command-and-control/data leaks"),
+    ("pastebin\\.com/raw", "Payload Fetching: Downloading malicious code staging snippets"),
+    ("curl\\s+.*-F\\s+['\"]file=@", "File Uploading via Curl: Actively packaging and uploading local files")
+]
+
 def load_local_manifest():
     manifest_path = Path(MANIFEST_FILE)
     compromised_packages = set()
@@ -55,9 +81,9 @@ def analyze_file_content(file_path):
     findings = []
     try:
         content = file_path.read_text(errors="ignore")
-        for signature, description in MALICIOUS_SIGNATURES.items():
+        for signature, explanation in MALICIOUS_SIGNATURES:
             if re.search(signature, content, re.IGNORECASE):
-                findings.append((signature, description))
+                findings.append((signature, explanation))
     except Exception:
         pass
     return findings
@@ -75,8 +101,8 @@ def deep_scan_all_caches(user_home):
             continue
         for pkgbuild_file in base.glob("**/PKGBUILD"):
             structural_anomalies = analyze_file_content(pkgbuild_file)
-            for sig, desc in structural_anomalies:
-                findings_list.append(f"{pkgbuild_file}: Trigger '{sig}' ({desc})")
+            for sig, explanation in structural_anomalies:
+                findings_list.append(f"{pkgbuild_file}: Trigger '{sig}'\n    -> Reason: {explanation}")
     return findings_list
 
 def audit_target_locations(package, version, user_home):
@@ -87,8 +113,8 @@ def audit_target_locations(package, version, user_home):
             target_file = alpm_meta_base / critical_file
             if target_file.exists():
                 structural_anomalies = analyze_file_content(target_file)
-                for sig, desc in structural_anomalies:
-                    findings_list.append(f"{target_file}: Trigger '{sig}' ({desc})")
+                for sig, explanation in structural_anomalies:
+                    findings_list.append(f"{target_file}: Trigger '{sig}'\n    -> Reason: {explanation}")
 
     cache_clusters = [
         user_home / f".cache/yay/{package}",
@@ -101,8 +127,8 @@ def audit_target_locations(package, version, user_home):
             pkgbuild_file = cache_directory / "PKGBUILD"
             if pkgbuild_file.exists():
                 structural_anomalies = analyze_file_content(pkgbuild_file)
-                for sig, desc in structural_anomalies:
-                    findings_list.append(f"{pkgbuild_file}: Trigger '{sig}' ({desc})")
+                for sig, explanation in structural_anomalies:
+                    findings_list.append(f"{pkgbuild_file}: Trigger '{sig}'\n    -> Reason: {explanation}")
     return findings_list
 
 def main():
