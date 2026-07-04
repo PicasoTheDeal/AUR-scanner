@@ -61,5 +61,4 @@ A lightweight offline static analysis utility to scan local ALPM metadata and AU
 
 ## Credits and Acknowledgments
 
- - Gemini (Google AI)
  - Members of the EndeavourOS, CachyOS, and Arch Linux communities for technical feedback
