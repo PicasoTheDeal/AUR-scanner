@@ -1,3 +1,7 @@
+> [!IMPORTANT]
+> **AUR-scanner is deprecated and succeeded by [SAUR](https://github.com/PicasoTheDeal/SAUR).** 
+> Development has moved. Please migrate to **SAUR** for active updates, bug fixes, and improvements.
+
 # AUR-scanner
 
 A lightweight offline static analysis utility to scan local ALPM metadata and AUR helper build caches for compromised packages and suspicious code patterns.
