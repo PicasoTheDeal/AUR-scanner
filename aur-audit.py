@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import os
 import re
 import sys
@@ -131,16 +132,33 @@ def audit_target_locations(package, version, user_home):
                     findings_list.append(f"{pkgbuild_file}: Trigger '{sig}'\n    -> Reason: {explanation}")
     return findings_list
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="AUR-scanner: Audit AUR packages for compromise indicators")
+    parser.add_argument("-s", "--scan", metavar="PACKAGE", help="Scan a specific installed AUR package by name")
+    return parser.parse_args()
+
 def main():
+    args = parse_args()
     user_home = Path.home()
     threat_feed = load_local_manifest()
     local_packages = parse_local_aur_registry()
     all_findings = []
 
-    if local_packages:
-        compromised_intersections = set(local_packages.keys()).intersection(threat_feed)
-        for package_match in compromised_intersections:
-            all_findings.extend(audit_target_locations(package_match, local_packages[package_match], user_home))
+    if args.scan:
+        target = args.scan.lower()
+        if target not in local_packages:
+            print(f"{RED}[!] Package '{args.scan}' is not installed as a foreign (AUR) package{NC}")
+            sys.exit(1)
+        print(f"{GREEN}[+] Scanning package: {args.scan} (version {local_packages[target]}){NC}")
+        all_findings.extend(audit_target_locations(target, local_packages[target], user_home))
+
+        if target in threat_feed:
+            all_findings.append(f"Package '{target}' is on the known compromised package list!")
+    else:
+        if local_packages:
+            compromised_intersections = set(local_packages.keys()).intersection(threat_feed)
+            for package_match in compromised_intersections:
+                all_findings.extend(audit_target_locations(package_match, local_packages[package_match], user_home))
 
     all_findings.extend(deep_scan_all_caches(user_home))
 
